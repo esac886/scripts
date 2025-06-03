@@ -1,0 +1,149 @@
+#!/usr/bin/env bash
+
+# this script was inspired by BreadOnPenguins's record script (https://github.com/BreadOnPenguins/scripts/blob/master/record)
+
+# DISCLAIMER
+# i tried to make this script more flexible but anyway it is a quite 'works on my machine' thing
+# you are free to modify this script for your needs
+# works with x11 and pipewire (probably pulseaudio too)
+# depends on pactl, ffmpeg, slop for selecting
+
+# TODO cant capture loopback AND mic at once
+# TODO notify
+
+SELECT=false
+SPAWN_ICON=false
+TOGGLE=true
+AUDIO_LOOPBACK=false
+AUDIO_MIC=false
+FILENAME="$HOME/Documents/records/record_$(date '+%a__%b%d__%H_%M_%S').mp4"
+
+usage() {
+    echo -e 'Usage:\trecord [options]'
+    echo -e 'Options:'
+    echo -e '\t-n Launch script in non-toggle mode. Default behaviour is spawning child record proccess and save pid in tmp file, and after invoking script again killing it. This flag allows you to use this script regularly: it starts recording and stops after killing'
+    echo -e '\t-s Allows to select recording region (requires slop)'
+    echo -e '\t-i Spawns simple record icon at /tmp/recordingicon and send RTMIN+3 signal to dwmblocks'
+    echo -e '\t-o Specify output path relative to pwd ($HOME/Documents/record/record_DATE.mp4 by default)'
+    echo -e '\t-l Record with audio default loopback output'
+    echo -e '\t-m Record with default audio source'
+    echo -e '\t-h Print this message'
+}
+
+parse_flags() {
+    while getopts "so:limht" flag; do
+        case "${flag}" in
+        s) SELECT=true ;;
+        i) SPAWN_ICON=true ;;
+        o) FILENAME="${PWD}/${OPTARG}" ;;
+        l) AUDIO_LOOPBACK=true ;;
+        m) AUDIO_MIC=true ;;
+        t) TOGGLE=true ;;
+        h)
+            usage
+            exit 0
+            ;;
+        *)
+            usage
+            exit 1
+            ;;
+        esac
+    done
+}
+
+create_region() {
+    SELECTION=$(slop -f "%w,%h,%x,%y" 2>/dev/null)
+
+    if [ $? -eq 0 ]; then
+        # REGION=$(echo "$SELECTION" | sed "s/,/\n/g")
+        REGION=($(echo "$SELECTION" | sed "s/,/\n/g"))
+
+        if [ $((${REGION[0]} % 2)) -ne 0 ]; then
+            ((REGION[0]++))
+        fi
+
+        if [ $((${REGION[1]} % 2)) -ne 0 ]; then
+            ((REGION[1]++))
+        fi
+    else
+        echo "Selection was cancelled"
+        exit 1
+    fi
+}
+
+record() {
+    local COMMAND="ffmpeg -f x11grab"
+
+    if ${SELECT}; then
+        create_region
+        COMMAND="$COMMAND -s ${REGION[0]}x${REGION[1]} -i :1+${REGION[2]},${REGION[3]}"
+    else
+        COMMAND="$COMMAND -s 1920x1080 -i :1+1920,0"
+    fi
+
+    if ${AUDIO_LOOPBACK}; then
+        # search default loopback as default sink pattern in sources. insecure
+        local DEFAULT_LOOPBACK=$(pactl list sources short | awk -v sink=$(pactl get-default-sink) '$0~sink {print $2}')
+        # if loopback found
+        if [ -n "$DEFAULT_LOOPBACK" ]; then
+            COMMAND="$COMMAND -f pulse -i $DEFAULT_LOOPBACK"
+        fi
+    fi
+
+    if ${AUDIO_MIC}; then
+        local DEFAULT_MIC=$(pactl get-default-source)
+        # if mic found
+        if [ -n "$DEFAULT_MIC" ]; then
+            # toggle on mic
+            amixer set Capture cap >/dev/null
+            COMMAND="$COMMAND -f pulse -i $DEFAULT_MIC "
+        fi
+    fi
+
+    if ${AUDIO_LOOPBACK} || ${AUDIO_MIC}; then
+        COMMAND="$COMMAND -c:a aac -b:a 192k"
+    fi
+
+    COMMAND="$COMMAND -pix_fmt yuv420p -c:v libx264 -preset veryfast -r 60 -qp 0"
+
+    if $SPAWN_ICON; then
+        echo "Rec •" >/tmp/dwmblocks-recicon && pkill -RTMIN+3 dwmblocks
+        # erase icon before interrupting/killing
+        trap "echo '' >/tmp/dwmblocks-recicon && pkill -RTMIN+3 dwmblocks" SIGINT SIGTERM
+    fi
+
+    if $TOGGLE; then
+        eval "$COMMAND $FILENAME &"
+        echo $! >/tmp/recpid
+    else
+        eval "$COMMAND $FILENAME"
+        if $SPAWN_ICON; then
+            echo "" >/tmp/dwmblocks-recicon && pkill -RTMIN+3 dwmblocks
+        fi
+    fi
+
+    # notify-send -t 500 -h string:bgcolor:#a3be8c "Recording started & mic toggled"
+}
+
+end() {
+    rm /tmp/dwmblocks-recicon 2>/dev/null && pkill -RTMIN+3 dwmblocks
+
+    kill -15 "$(cat /tmp/recpid)"
+    rm -f /tmp/recpid
+
+    if ${AUDIO_MIC}; then
+        amixer set Capture nocap >/dev/null
+    fi
+
+    # notify-send -t 500 -h string:bgcolor:#bf616a "Recording ended & mic toggled"
+}
+
+parse_flags "$@"
+
+if $TOGGLE; then
+    if [[ -f /tmp/recpid ]]; then
+        end && exit 0
+    fi
+fi
+
+record

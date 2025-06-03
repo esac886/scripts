@@ -1,0 +1,27 @@
+#!/bin/sh
+
+# simple script for changing default output audio device with pactl on pipewire
+
+# devices are hardcoded cause i have output devices i don't want toggle to
+DEVICE1="alsa_output.usb-BlueTrm_Fenda_V720_20170726905923-00.analog-stereo"
+DEVICE2="alsa_output.pci-0000_29_00.3.analog-stereo"
+
+CURRENT=$(pactl get-default-sink)
+
+if [ "$CURRENT" = "$DEVICE1" ]; then
+  NEW="$DEVICE2"
+else
+  NEW="$DEVICE1"
+fi
+
+pactl set-default-sink "$NEW"
+
+while read stream; do
+    # Check whether there is a stream playing in the first place
+    if [ -z "$stream" ]; then
+        break
+    fi
+
+    streamId=$(echo $stream | awk '{ print $1 }')
+    pactl move-sink-input $streamId @DEFAULT_SINK@
+done <<<"$(pactl list short sink-inputs)"
