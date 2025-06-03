@@ -23,7 +23,7 @@ usage() {
     echo -e 'Options:'
     echo -e '\t-n Launch script in non-toggle mode. Default behaviour is spawning child record proccess and save pid in tmp file, and after invoking script again killing it. This flag allows you to use this script regularly: it starts recording and stops after killing'
     echo -e '\t-s Allows to select recording region (requires slop)'
-    echo -e '\t-i Spawns simple record icon at /tmp/recordingicon and send RTMIN+3 signal to dwmblocks'
+    echo -e '\t-i Spawns simple record icon at /tmp/dwmblocks-recicon and send RTMIN+3 signal to dwmblocks'
     echo -e '\t-o Specify output path relative to pwd ($HOME/Documents/record/record_DATE.mp4 by default)'
     echo -e '\t-l Record with audio default loopback output'
     echo -e '\t-m Record with default audio source'
