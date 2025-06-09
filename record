@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 # this script was inspired by BreadOnPenguins's record script (https://github.com/BreadOnPenguins/scripts/blob/master/record)
 
@@ -31,14 +31,14 @@ usage() {
 }
 
 parse_flags() {
-    while getopts "so:limht" flag; do
+    while getopts "so:limhn" flag; do
         case "${flag}" in
         s) SELECT=true ;;
         i) SPAWN_ICON=true ;;
         o) FILENAME="${PWD}/${OPTARG}" ;;
         l) AUDIO_LOOPBACK=true ;;
         m) AUDIO_MIC=true ;;
-        t) TOGGLE=true ;;
+        n) TOGGLE=false ;;
         h)
             usage
             exit 0
@@ -78,7 +78,7 @@ record() {
         create_region
         COMMAND="$COMMAND -s ${REGION[0]}x${REGION[1]} -i :1+${REGION[2]},${REGION[3]}"
     else
-        COMMAND="$COMMAND -s 1920x1080 -i :1+1920,0"
+        COMMAND="$COMMAND -s 1920x1080 -i :0+1920,0"
     fi
 
     if ${AUDIO_LOOPBACK}; then
