@@ -1,0 +1,19 @@
+#!/bin/sh
+tmp_port_name="/tmp/nvim-st-server-port"
+
+# if tmp file is exists do nothing
+if [[ ! -f $tmp_port_name ]]; then
+    tmpfile=$(mktemp /tmp/st-edit.XXXXXX)
+    trap  'rm "$tmpfile"' 0 1 15
+    cat > "$tmpfile"
+
+    # gen free port
+    free_port=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1]); s.close()')
+    
+    # creating tmp file that stores this port
+    echo "$free_port" > "$tmp_port_name"
+    trap  'rm "$tmp_port_name"' 0 1 15
+    
+    # start nvim instance as a server
+    nvim --listen "localhost:$free_port" "$tmpfile"
+fi
