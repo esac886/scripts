@@ -2,7 +2,7 @@
 tmp_port_name="/tmp/nvim-st-server-port"
 
 # if tmp file is exists do nothing
-if [[ ! -f $tmp_port_name ]]; then
+if [ ! -f $tmp_port_name ]; then
     tmpfile=$(mktemp /tmp/st-edit.XXXXXX)
     trap  'rm "$tmpfile"' 0 1 15
     cat > "$tmpfile"

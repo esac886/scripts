@@ -141,7 +141,7 @@ end() {
 parse_flags "$@"
 
 if $TOGGLE; then
-    if [[ -f /tmp/recpid ]]; then
+    if [ -f /tmp/recpid ]; then
         end && exit 0
     fi
 fi

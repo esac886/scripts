@@ -1,7 +1,7 @@
 #!/bin/sh
 tmp_port_name="/tmp/nvim-st-server-port"
 
-if [[ -f $tmp_port_name ]]; then
+if [ -f $tmp_port_name ]; then
     nvim --server "localhost:$(cat $tmp_port_name)" --remote-ui
 else
     echo "no nvim server running"
