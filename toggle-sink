@@ -16,7 +16,7 @@ fi
 
 pactl set-default-sink "$NEW"
 
-while read stream; do
+pactl list short sink-inputs | while read -r stream; do
     # Check whether there is a stream playing in the first place
     if [ -z "$stream" ]; then
         break
@@ -24,4 +24,4 @@ while read stream; do
 
     streamId=$(echo $stream | awk '{ print $1 }')
     pactl move-sink-input $streamId @DEFAULT_SINK@
-done <<<"$(pactl list short sink-inputs)"
+done 
