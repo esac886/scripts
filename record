@@ -16,7 +16,16 @@ SPAWN_ICON=false
 TOGGLE=true
 AUDIO_LOOPBACK=false
 AUDIO_MIC=false
-FILENAME="$HOME/Documents/records/record_$(date '+%a__%b%d__%H_%M_%S').mp4"
+
+# if xdg-user-dir presented
+if command -v xdg-user-dir >/dev/null 2>&1; then
+    DOCUMENTS_DIR="$(xdg-user-dir DOCUMENTS)"
+else
+    DOCUMENTS_DIR="$HOME/Documents"
+fi
+mkdir -p "$DOCUMENTS_DIR/records"
+
+FILENAME="$DOCUMENTS_DIR/records/record_$(date '+%a__%b%d__%H_%M_%S').mp4"
 
 usage() {
     echo -e 'Usage:\trecord [options]'
@@ -55,8 +64,7 @@ create_region() {
     SELECTION=$(slop -f "%w,%h,%x,%y" 2>/dev/null)
 
     if [ $? -eq 0 ]; then
-        # REGION=$(echo "$SELECTION" | sed "s/,/\n/g")
-        REGION=($(echo "$SELECTION" | sed "s/,/\n/g"))
+        REGION=$(echo "$SELECTION" | sed "s/,/\n/g")
 
         if [ $((${REGION[0]} % 2)) -ne 0 ]; then
             ((REGION[0]++))
